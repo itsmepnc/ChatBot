@@ -1,0 +1,29 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - chatnet
+
+  chatbot:
+    image: itsmepnc/chatbot:prod
+    container_name: chatbot-prod
+    depends_on:
+      - ollama
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      # set multiple possible keys so your app will pick one of them
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA__URL=http://ollama:11434
+      - Ollama__Url=http://ollama:11434
+    ports:
+      - "8080:8080"
+    networks:
+      - chatnet
+    restart: unless-stopped
+
+networks:
+  chatnet:
+    driver: bridge
