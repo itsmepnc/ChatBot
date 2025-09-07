@@ -6,20 +6,27 @@ services:
       - "11434:11434"
     networks:
       - chatnet
+    restart: unless-stopped
+    healthcheck:
+      # TCP probe (works without curl/wget)
+      test: ["CMD-SHELL", "timeout 1 bash -c 'cat < /dev/tcp/localhost/11434' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
 
   chatbot:
-    image: itsmepnc/chatbot:prod
+    image: ghcr.io/itsmepnc/chatbot:latest   # deployed image (CI will push here)
     container_name: chatbot-prod
     depends_on:
       - ollama
     environment:
       - ASPNETCORE_URLS=http://+:8080
-      # set multiple possible keys so your app will pick one of them
-      - OLLAMA_URL=http://ollama:11434
       - OLLAMA__URL=http://ollama:11434
-      - Ollama__Url=http://ollama:11434
     ports:
       - "8080:8080"
+    volumes:
+      - chatbot-keys:/home/appuser/.aspnet/DataProtection-Keys
     networks:
       - chatnet
     restart: unless-stopped
@@ -27,3 +34,6 @@ services:
 networks:
   chatnet:
     driver: bridge
+
+volumes:
+  chatbot-keys:

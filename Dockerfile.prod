@@ -1,24 +1,43 @@
-# Dockerfile.prod
+# build stage (same as before)
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
+
 COPY ["ChatBot/ChatBot.csproj", "ChatBot/"]
 RUN dotnet restore "ChatBot/ChatBot.csproj"
+
 COPY . .
 WORKDIR /src/ChatBot
-RUN dotnet publish "ChatBot.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet restore "ChatBot.csproj" && \
+    dotnet publish "ChatBot.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
+# runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# create non-root user
-RUN adduser --disabled-password --gecos "" appuser \
+# create app dir and non-root user, set ownership (do this before switching)
+RUN mkdir -p /app \
+ && adduser --disabled-password --gecos "" appuser \
  && chown -R appuser:appuser /app
+
+# copy published output as root, then prepare entrypoint
+COPY --from=build /app/publish/ /app
+
+# copy entrypoint and install su-exec for simple user switching (tiny)
+COPY entrypoint.sh /entrypoint.sh
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && chmod +x /entrypoint.sh
+
+# Use non-root user
 USER appuser
 
 ENV ASPNETCORE_URLS=http://+:8080 \
-    ASPNETCORE_ENVIRONMENT=Production
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true
 
 EXPOSE 8080
 
-COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "ChatBot.dll"]
+# Use tini as init and run entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
