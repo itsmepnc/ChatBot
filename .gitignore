@@ -1,0 +1,31 @@
+﻿# Build outputs
+bin/
+obj/
+out/
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Docker helper files not required in context (if you want to keep them, remove these)
+.dockerignore
+Dockerfile*
+
+# Node
+node_modules/
+npm-debug.log
+
+# Secrets / config
+secrets.dev.yaml
+values.dev.yaml
+*.env
+*.db    # generic DB files
+vector-store.db
+
+# Logs / OS junk
+*.log
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
